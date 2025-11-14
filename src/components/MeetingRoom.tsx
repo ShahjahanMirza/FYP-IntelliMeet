@@ -84,7 +84,10 @@ export const MeetingRoom = ({
         enabled: false,
       },
       disableProfile: false,
-      readOnlyName: true, // Prevent users from changing their display name
+      readOnlyName: true,
+      disableInviteFunctions: false,
+      doNotStoreRoom: true,
+      disableDeepLinking: true,
       toolbarButtons: [
         'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
         'fodeviceselection', 'hangup', 'profile', 'chat', 'recording', 
