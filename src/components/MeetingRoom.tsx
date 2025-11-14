@@ -4,6 +4,16 @@ import { MeetingControls } from "./MeetingControls";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Copy, Users, Clock, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -30,6 +40,7 @@ export const MeetingRoom = ({
   const [meetingDuration, setMeetingDuration] = useState(0);
   const [isJitsiLoading, setIsJitsiLoading] = useState(true);
   const [jitsiError, setJitsiError] = useState<string | null>(null);
+  const [showEndMeetingDialog, setShowEndMeetingDialog] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -63,11 +74,17 @@ export const MeetingRoom = ({
     roomName: roomName,
     displayName: displayName,
     subject: `Meeting Room: ${roomName}`,
+    jwt: jwt,
     configOverwrite: {
       startWithAudioMuted: false,
       startWithVideoMuted: false,
       enableWelcomePage: false,
       prejoinPageEnabled: false,
+      prejoinConfig: {
+        enabled: false,
+      },
+      disableProfile: false,
+      readOnlyName: true, // Prevent users from changing their display name
       toolbarButtons: [
         'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
         'fodeviceselection', 'hangup', 'profile', 'chat', 'recording', 
@@ -97,13 +114,53 @@ export const MeetingRoom = ({
 
   const handleJitsiEvents = {
     onReadyToClose: () => {
-      onLeaveMeeting?.();
+      if (isHost) {
+        setShowEndMeetingDialog(true);
+      } else {
+        handleEndMeeting();
+      }
     },
-    onApiReady: () => {
+    onApiReady: (api: any) => {
       console.log('Jitsi API is ready');
+      jitsiRef.current = api;
       setIsJitsiLoading(false);
       setJitsiError(null);
+      
+      // Set display name immediately when API is ready
+      api.executeCommand('displayName', displayName);
+      
+      // Track participant count
+      api.addEventListener('participantJoined', () => {
+        setParticipantCount(api.getNumberOfParticipants());
+      });
+      api.addEventListener('participantLeft', () => {
+        setParticipantCount(api.getNumberOfParticipants());
+      });
     }
+  };
+
+  const handleEndMeetingClick = () => {
+    if (isHost) {
+      setShowEndMeetingDialog(true);
+    } else {
+      handleEndMeeting();
+    }
+  };
+
+  const handleEndMeeting = () => {
+    if (jitsiRef.current) {
+      jitsiRef.current.executeCommand('hangup');
+    }
+    setShowEndMeetingDialog(false);
+    toast({
+      title: isHost ? "Meeting ended" : "Left meeting",
+      description: isHost 
+        ? "You have ended the meeting session." 
+        : "You have left the meeting.",
+    });
+    setTimeout(() => {
+      onLeaveMeeting?.();
+    }, 100);
   };
 
   return (
@@ -212,6 +269,29 @@ export const MeetingRoom = ({
           />
         </div>
       </div>
+
+      {/* End Meeting Confirmation Dialog */}
+      <AlertDialog open={showEndMeetingDialog} onOpenChange={setShowEndMeetingDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {isHost ? "End Meeting for Everyone?" : "Leave Meeting?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {isHost 
+                ? "As the host, you're ending your session. Note: With the current setup, other participants may continue their session even after you leave."
+                : "Are you sure you want to leave this meeting? You can rejoin using the meeting code."
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleEndMeeting} className="bg-destructive hover:bg-destructive/90">
+              {isHost ? "End Session" : "Leave"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
