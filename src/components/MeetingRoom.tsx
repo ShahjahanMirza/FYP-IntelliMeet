@@ -35,7 +35,7 @@ export const MeetingRoom = ({
   onLeaveMeeting,
   jwt
 }: MeetingRoomProps) => {
-  const jitsiRef = useRef<any>(null);
+  const jitsiApiRef = useRef<any>(null);
   const [participantCount, setParticipantCount] = useState(1);
   const [meetingDuration, setMeetingDuration] = useState(0);
   const [isJitsiLoading, setIsJitsiLoading] = useState(true);
@@ -122,7 +122,7 @@ export const MeetingRoom = ({
     },
     onApiReady: (api: any) => {
       console.log('Jitsi API is ready');
-      jitsiRef.current = api;
+      jitsiApiRef.current = api;
       setIsJitsiLoading(false);
       setJitsiError(null);
       
@@ -148,8 +148,8 @@ export const MeetingRoom = ({
   };
 
   const handleEndMeeting = () => {
-    if (jitsiRef.current) {
-      jitsiRef.current.executeCommand('hangup');
+    if (jitsiApiRef.current) {
+      jitsiApiRef.current.executeCommand('hangup');
     }
     setShowEndMeetingDialog(false);
     toast({
@@ -257,7 +257,6 @@ export const MeetingRoom = ({
             onReadyToClose={handleJitsiEvents.onReadyToClose}
             onApiReady={handleJitsiEvents.onApiReady}
             getIFrameRef={(iframeRef) => {
-              jitsiRef.current = iframeRef;
               if (iframeRef) {
                 // Apply styling to iframe
                 iframeRef.style.width = '100%';
