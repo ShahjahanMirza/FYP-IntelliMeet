@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { VideoIcon, Users, Calendar, Copy, ArrowRight, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Logo } from "@/components/Logo";
 import heroImage from "@/assets/hero-video-conference.jpg";
 
 const CreateMeeting = () => {
@@ -65,23 +66,60 @@ const CreateMeeting = () => {
 
     setIsCreating(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const meetingCode = generateMeetingCode();
-    const meetingData = {
-      code: meetingCode,
-      title: meetingTitle || "Quick Meeting",
-      hostName: displayName,
-      createdAt: new Date().toISOString(),
-      isHost: true
-    };
+    try {
+      const meetingCode = generateMeetingCode();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to create a meeting.",
+          variant: "destructive"
+        });
+        navigate("/auth");
+        return;
+      }
 
-    // Store meeting data in localStorage for demo purposes
-    localStorage.setItem(`meeting_${meetingCode}`, JSON.stringify(meetingData));
-    
-    setIsCreating(false);
-    navigate(`/meeting/${meetingCode}?host=true&name=${encodeURIComponent(displayName)}`);
+      const { data: meeting, error } = await supabase
+        .from("meetings")
+        .insert({
+          code: meetingCode,
+          title: meetingTitle || "Quick Meeting",
+          host_id: session.user.id,
+          status: "active",
+          started_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error creating meeting:", error);
+        toast({
+          title: "Failed to create meeting",
+          description: "Please try again.",
+          variant: "destructive"
+        });
+        setIsCreating(false);
+        return;
+      }
+
+      await supabase.from("meeting_participants").insert({
+        meeting_id: meeting.id,
+        user_id: session.user.id,
+        is_host: true,
+      });
+
+      setIsCreating(false);
+      navigate(`/meeting/${meetingCode}?host=true&name=${encodeURIComponent(displayName)}`);
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive"
+      });
+      setIsCreating(false);
+    }
   };
 
   const handleInstantMeeting = async () => {
@@ -95,11 +133,61 @@ const CreateMeeting = () => {
     }
 
     setIsCreating(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
     
-    const meetingCode = generateMeetingCode();
-    setIsCreating(false);
-    navigate(`/meeting/${meetingCode}?host=true&name=${encodeURIComponent(displayName)}`);
+    try {
+      const meetingCode = generateMeetingCode();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to start a meeting.",
+          variant: "destructive"
+        });
+        navigate("/auth");
+        return;
+      }
+
+      const { data: meeting, error } = await supabase
+        .from("meetings")
+        .insert({
+          code: meetingCode,
+          title: "Instant Meeting",
+          host_id: session.user.id,
+          status: "active",
+          started_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error creating meeting:", error);
+        toast({
+          title: "Failed to create meeting",
+          description: "Please try again.",
+          variant: "destructive"
+        });
+        setIsCreating(false);
+        return;
+      }
+
+      await supabase.from("meeting_participants").insert({
+        meeting_id: meeting.id,
+        user_id: session.user.id,
+        is_host: true,
+      });
+
+      setIsCreating(false);
+      navigate(`/meeting/${meetingCode}?host=true&name=${encodeURIComponent(displayName)}`);
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive"
+      });
+      setIsCreating(false);
+    }
   };
 
   const copyDemoCode = () => {
@@ -123,10 +211,12 @@ const CreateMeeting = () => {
         
         {/* Left Side - Hero Content */}
         <div className="text-center lg:text-left text-white space-y-8">
+          <Logo size="xl" variant="white" className="justify-center lg:justify-start mb-8" />
+          
           <div className="space-y-6">
             <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm px-4 py-2">
               <Sparkles className="h-4 w-4 mr-2" />
-              Professional Video Conferencing
+              AI-Powered Video Conferencing
             </Badge>
             <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
               Connect with Anyone,
@@ -136,7 +226,7 @@ const CreateMeeting = () => {
               </span>
             </h1>
             <p className="text-xl text-white/90 max-w-lg leading-relaxed">
-              Create secure, high-quality video meetings with advanced host controls, screen sharing, and unlimited participants.
+              Experience secure, high-quality video meetings with intelligent features, unlimited participants, and seamless collaboration.
             </p>
           </div>
 
@@ -185,7 +275,7 @@ const CreateMeeting = () => {
           <CardHeader className="text-center pb-6">
             <CardTitle className="text-3xl font-bold">Start Your Meeting</CardTitle>
             <CardDescription className="text-base">
-              Enter your details to create or join a meeting
+              Create instant meetings or schedule for later
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

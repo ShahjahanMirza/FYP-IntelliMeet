@@ -4,6 +4,7 @@ import { MeetingControls } from "./MeetingControls";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Logo } from "@/components/Logo";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -84,10 +85,13 @@ export const MeetingRoom = ({
         enabled: false,
       },
       disableProfile: false,
-      readOnlyName: true,
+      readOnlyName: false,
       disableInviteFunctions: false,
       doNotStoreRoom: true,
       disableDeepLinking: true,
+      requireDisplayName: false,
+      defaultLocalDisplayName: displayName,
+      defaultRemoteDisplayName: 'Participant',
       toolbarButtons: [
         'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
         'fodeviceselection', 'hangup', 'profile', 'chat', 'recording', 
@@ -104,14 +108,15 @@ export const MeetingRoom = ({
       SHOW_POWERED_BY: false,
       DISPLAY_WELCOME_PAGE_CONTENT: false,
       DISPLAY_WELCOME_PAGE_TOOLBAR_ADDITIONAL_CONTENT: false,
-      APP_NAME: "MeetSpace",
-      NATIVE_APP_NAME: "MeetSpace",
-      PROVIDER_NAME: "MeetSpace",
+      APP_NAME: "IntelliMeet",
+      NATIVE_APP_NAME: "IntelliMeet",
+      PROVIDER_NAME: "IntelliMeet",
       TOOLBAR_ALWAYS_VISIBLE: true,
+      DISABLE_JOIN_LEAVE_NOTIFICATIONS: false,
     },
     userInfo: {
       displayName: displayName,
-      email: `${displayName.replace(/\s+/g, '').toLowerCase()}@meetspace.local`,
+      email: `${displayName.replace(/\s+/g, '').toLowerCase()}@intellimeet.local`,
     }
   };
 
@@ -171,6 +176,7 @@ export const MeetingRoom = ({
       {/* Meeting Header */}
       <Card className="flex items-center justify-between p-4 bg-card/80 backdrop-blur-sm border-b border-border/50">
         <div className="flex items-center gap-4">
+          <Logo size="sm" />
           <div>
             <h1 className="text-xl font-semibold">Meeting Room</h1>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -257,11 +263,11 @@ export const MeetingRoom = ({
             interfaceConfigOverwrite={jitsiConfig.interfaceConfigOverwrite}
             userInfo={jitsiConfig.userInfo}
             jwt={jwt}
+            lang="en"
             onReadyToClose={handleJitsiEvents.onReadyToClose}
             onApiReady={handleJitsiEvents.onApiReady}
             getIFrameRef={(iframeRef) => {
               if (iframeRef) {
-                // Apply styling to iframe
                 iframeRef.style.width = '100%';
                 iframeRef.style.height = '100%';
                 iframeRef.style.border = 'none';

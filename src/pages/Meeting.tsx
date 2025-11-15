@@ -48,25 +48,93 @@ const Meeting = () => {
       return;
     }
 
-    // Simulate API validation
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // For demo purposes, accept DEMO1234 or any stored meeting
-    const storedMeeting = localStorage.getItem(`meeting_${roomId}`);
-    
-    if (roomId === "DEMO1234" || storedMeeting) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        navigate("/auth");
+        return;
+      }
+
+      const { data: meeting, error: meetingError } = await supabase
+        .from("meetings")
+        .select("*")
+        .eq("code", roomId)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (meetingError) {
+        console.error("Error fetching meeting:", meetingError);
+      }
+
+      if (!meeting && roomId !== "DEMO1234") {
+        setError("Meeting not found or has ended");
+        setIsLoading(false);
+        return;
+      }
+
+      if (meeting && !isHost) {
+        const { data: existingParticipant } = await supabase
+          .from("meeting_participants")
+          .select("id")
+          .eq("meeting_id", meeting.id)
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        if (!existingParticipant) {
+          await supabase.from("meeting_participants").insert({
+            meeting_id: meeting.id,
+            user_id: session.user.id,
+            is_host: false,
+          });
+        }
+      }
+
       setIsLoading(false);
       toast({
         title: "Joining meeting",
         description: `Welcome ${displayName}! ${isHost ? 'You are the host.' : ''}`,
       });
-    } else {
-      setError("Meeting not found or has ended");
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      setError("An error occurred while joining the meeting");
       setIsLoading(false);
     }
   };
 
-  const handleLeaveMeeting = () => {
+  const handleLeaveMeeting = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session && roomId && roomId !== "DEMO1234") {
+        const { data: meeting } = await supabase
+          .from("meetings")
+          .select("id")
+          .eq("code", roomId)
+          .maybeSingle();
+
+        if (meeting) {
+          await supabase
+            .from("meeting_participants")
+            .update({ left_at: new Date().toISOString() })
+            .eq("meeting_id", meeting.id)
+            .eq("user_id", session.user.id);
+
+          if (isHost) {
+            await supabase
+              .from("meetings")
+              .update({ 
+                status: "ended",
+                ended_at: new Date().toISOString()
+              })
+              .eq("id", meeting.id);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error leaving meeting:", err);
+    }
+
     toast({
       title: "Left meeting",
       description: "You have successfully left the meeting.",

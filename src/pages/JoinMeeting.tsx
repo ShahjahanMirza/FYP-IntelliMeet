@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Users, Shield, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Logo } from "@/components/Logo";
 
 const JoinMeeting = () => {
   const [meetingCode, setMeetingCode] = useState("");
@@ -64,22 +65,65 @@ const JoinMeeting = () => {
 
     setIsJoining(true);
     
-    // Simulate validation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Check if meeting exists (for demo purposes)
-    const storedMeeting = localStorage.getItem(`meeting_${meetingCode.toUpperCase()}`);
-    
-    if (meetingCode.toUpperCase() === "DEMO1234" || storedMeeting) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to join a meeting.",
+          variant: "destructive"
+        });
+        navigate("/auth");
+        return;
+      }
+
+      const { data: meeting, error } = await supabase
+        .from("meetings")
+        .select("*")
+        .eq("code", meetingCode.toUpperCase())
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error checking meeting:", error);
+        toast({
+          title: "Error",
+          description: "Failed to verify meeting code.",
+          variant: "destructive"
+        });
+        setIsJoining(false);
+        return;
+      }
+
+      if (!meeting && meetingCode.toUpperCase() !== "DEMO1234") {
+        setIsJoining(false);
+        toast({
+          title: "Meeting not found",
+          description: "Please check the meeting code and try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (meeting) {
+        await supabase.from("meeting_participants").insert({
+          meeting_id: meeting.id,
+          user_id: session.user.id,
+          is_host: false,
+        });
+      }
+
       setIsJoining(false);
       navigate(`/meeting/${meetingCode.toUpperCase()}?host=false&name=${encodeURIComponent(displayName)}`);
-    } else {
-      setIsJoining(false);
+    } catch (err) {
+      console.error("Unexpected error:", err);
       toast({
-        title: "Meeting not found",
-        description: "Please check the meeting code and try again. Use DEMO1234 for a demo meeting.",
+        title: "Error",
+        description: "An unexpected error occurred.",
         variant: "destructive"
       });
+      setIsJoining(false);
     }
   };
 
@@ -95,6 +139,10 @@ const JoinMeeting = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
+      <div className="absolute top-8 left-8">
+        <Logo size="lg" variant="white" />
+      </div>
+      
       <div className="w-full max-w-md">
         <Card className="bg-card/95 backdrop-blur-sm border-border/50 shadow-xl">
           <CardHeader className="text-center space-y-4">

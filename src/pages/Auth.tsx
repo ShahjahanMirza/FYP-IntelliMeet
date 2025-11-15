@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Video } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -99,12 +99,10 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <Video className="w-8 h-8 text-primary" />
-            </div>
+            <Logo size="lg" />
           </div>
-          <CardTitle className="text-2xl">MeetSpace</CardTitle>
-          <CardDescription>Sign in or create an account to continue</CardDescription>
+          <CardTitle className="text-2xl">Welcome to IntelliMeet</CardTitle>
+          <CardDescription>Sign in or create an account to start your meetings</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
