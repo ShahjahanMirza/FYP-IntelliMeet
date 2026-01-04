@@ -73,6 +73,8 @@ export default function Auth() {
         options: {
           data: {
             username: signupUsername,
+            name: signupUsername,
+            source: 'intellimeet',
           },
           emailRedirectTo: `${window.location.origin}/`,
         },

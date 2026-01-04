@@ -25,15 +25,15 @@ const CreateMeeting = () => {
       if (!session) {
         navigate("/auth");
       } else {
-        // Load username from profile
+        // Load username from users table
         supabase
-          .from("profiles")
-          .select("username")
+          .from("users")
+          .select("username, name")
           .eq("id", session.user.id)
           .maybeSingle()
           .then(({ data }) => {
             if (data) {
-              setDisplayName(data.username);
+              setDisplayName(data.username || data.name);
             }
             setLoading(false);
           });

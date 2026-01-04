@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import JoinMeeting from "./pages/JoinMeeting";
 import Meeting from "./pages/Meeting";
+import EmbedMeeting from "./pages/EmbedMeeting";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/join" element={<JoinMeeting />} />
           <Route path="/meeting/:roomId" element={<Meeting />} />
+          <Route path="/embed/:roomId" element={<EmbedMeeting />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

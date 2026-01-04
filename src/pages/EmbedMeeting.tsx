@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MeetingRoom } from "@/components/MeetingRoom";
@@ -7,41 +7,59 @@ import { Card } from "@/components/ui/card";
 import { Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const Meeting = () => {
+/**
+ * EmbedMeeting - A minimal meeting page designed to be embedded in an iframe
+ * Used by IntelliClass to embed meetings directly within class pages
+ */
+const EmbedMeeting = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { toast } = useToast();
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   const isHost = searchParams.get('host') === 'true';
+  const nameParam = searchParams.get('name');
+  const classId = searchParams.get('classId');
 
   useEffect(() => {
-    // Check authentication
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const initMeeting = async () => {
+      // Check authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      
       if (!session) {
-        navigate("/auth");
+        setError("Please sign in to join this meeting");
+        setIsLoading(false);
+        return;
+      }
+
+      setIsAuthenticated(true);
+
+      // Use name from URL param or fetch from database
+      if (nameParam) {
+        setDisplayName(nameParam);
       } else {
-        // Load username from users table
-        supabase
+        const { data: userData } = await supabase
           .from("users")
           .select("username, name")
           .eq("id", session.user.id)
-          .maybeSingle()
-          .then(({ data }) => {
-            if (data) {
-              setDisplayName(data.username || data.name);
-            }
-            validateMeeting();
-          });
+          .maybeSingle();
+        
+        if (userData) {
+          setDisplayName(userData.username || userData.name);
+        }
       }
-    });
-  }, [navigate]);
 
-  const validateMeeting = async () => {
+      await validateMeeting(session.user.id);
+    };
+
+    initMeeting();
+  }, [roomId, nameParam]);
+
+  const validateMeeting = async (userId: string) => {
     if (!roomId) {
       setError("Invalid meeting room");
       setIsLoading(false);
@@ -49,13 +67,6 @@ const Meeting = () => {
     }
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-
       const { data: meeting, error: meetingError } = await supabase
         .from("meetings")
         .select("*")
@@ -67,34 +78,32 @@ const Meeting = () => {
         console.error("Error fetching meeting:", meetingError);
       }
 
+      // Allow DEMO meeting or valid meetings
       if (!meeting && roomId !== "DEMO1234") {
         setError("Meeting not found or has ended");
         setIsLoading(false);
         return;
       }
 
+      // Add participant if not host
       if (meeting && !isHost) {
         const { data: existingParticipant } = await supabase
           .from("meeting_participants")
           .select("id")
           .eq("meeting_id", meeting.id)
-          .eq("user_id", session.user.id)
+          .eq("user_id", userId)
           .maybeSingle();
 
         if (!existingParticipant) {
           await supabase.from("meeting_participants").insert({
             meeting_id: meeting.id,
-            user_id: session.user.id,
+            user_id: userId,
             is_host: false,
           });
         }
       }
 
       setIsLoading(false);
-      toast({
-        title: "Joining meeting",
-        description: `Welcome ${displayName}! ${isHost ? 'You are the host.' : ''}`,
-      });
     } catch (err) {
       console.error("Unexpected error:", err);
       setError("An error occurred while joining the meeting");
@@ -135,11 +144,10 @@ const Meeting = () => {
       console.error("Error leaving meeting:", err);
     }
 
-    toast({
-      title: "Left meeting",
-      description: "You have successfully left the meeting.",
-    });
-    navigate('/');
+    // Notify parent window (IntelliClass) that meeting ended
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'MEETING_ENDED', roomId, classId }, '*');
+    }
   };
 
   if (isLoading) {
@@ -151,9 +159,6 @@ const Meeting = () => {
             <h2 className="text-xl font-semibold">Joining Meeting</h2>
             <p className="text-muted-foreground">
               Connecting to room {roomId}...
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Welcome, {displayName}
             </p>
           </div>
         </Card>
@@ -170,14 +175,14 @@ const Meeting = () => {
             <h2 className="text-xl font-semibold">Unable to Join</h2>
             <p className="text-muted-foreground">{error}</p>
           </div>
-          <div className="space-y-2">
-            <Button onClick={() => navigate('/')} className="w-full">
-              Create New Meeting
+          {!isAuthenticated && (
+            <Button 
+              onClick={() => window.open('/auth', '_blank')}
+              className="w-full"
+            >
+              Sign In
             </Button>
-            <Button variant="outline" onClick={() => navigate('/join')} className="w-full">
-              Try Different Code
-            </Button>
-          </div>
+          )}
         </Card>
       </div>
     );
@@ -193,4 +198,4 @@ const Meeting = () => {
   );
 };
 
-export default Meeting;
+export default EmbedMeeting;
