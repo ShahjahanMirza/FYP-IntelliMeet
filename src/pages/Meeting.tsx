@@ -139,7 +139,7 @@ const Meeting = () => {
       title: "Left meeting",
       description: "You have successfully left the meeting.",
     });
-    navigate('/');
+    navigate('/home');
   };
 
   if (isLoading) {
@@ -171,7 +171,7 @@ const Meeting = () => {
             <p className="text-muted-foreground">{error}</p>
           </div>
           <div className="space-y-2">
-            <Button onClick={() => navigate('/')} className="w-full">
+            <Button onClick={() => navigate('/home')} className="w-full">
               Create New Meeting
             </Button>
             <Button variant="outline" onClick={() => navigate('/join')} className="w-full">
