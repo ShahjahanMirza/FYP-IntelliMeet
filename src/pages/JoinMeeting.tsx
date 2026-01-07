@@ -150,7 +150,7 @@ const JoinMeeting = () => {
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/home')}
                 className="text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="h-4 w-4 mr-1" />
@@ -231,7 +231,7 @@ const JoinMeeting = () => {
                 <Button 
                   variant="link" 
                   className="p-0 h-auto text-primary"
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/home')}
                 >
                   Create a new meeting
                 </Button>

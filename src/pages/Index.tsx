@@ -51,6 +51,7 @@ const Index = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success("Logged out successfully");
+    navigate("/");
   };
 
   // Redirect to auth if not logged in
